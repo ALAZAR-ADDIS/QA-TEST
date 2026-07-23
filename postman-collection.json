@@ -1,0 +1,662 @@
+{
+  "info": {
+    "name": "Ella API — QA Collection",
+    "description": "Happy paths, bug reproductions, validation failures, and edge cases based on BUGS.md",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4000" },
+    { "key": "userId",  "value": "1" },
+    { "key": "productId", "value": "1" }
+  ],
+  "item": [
+
+    {
+      "name": "Users",
+      "item": [
+
+        {
+          "name": "[Happy Path] POST /users — create user",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/users", "host": ["{{baseUrl}}"], "path": ["users"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alice\",\n  \"email\": \"alice@test.com\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Returns user with id', () => {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body.data.id).to.be.a('number');",
+              "  pm.expect(body.data.email).to.eql('alice@test.com');",
+              "  pm.collectionVariables.set('userId', body.data.id);",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[Happy Path] GET /users — get all users",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/users", "host": ["{{baseUrl}}"], "path": ["users"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returns array', () => {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body.data).to.be.an('array');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[Happy Path] GET /users/:id — get user by id",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["users", "{{userId}}"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returns correct user', () => {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body.data.id).to.eql(Number(pm.collectionVariables.get('userId')));",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[Happy Path] PUT /users/:id — update user",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["users", "{{userId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alice Updated\",\n  \"email\": \"alice.updated@test.com\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Name is updated', () => {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body.data.name).to.eql('Alice Updated');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[BUG-2] POST /users — whitespace name and email accepted (expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/users", "host": ["{{baseUrl}}"], "path": ["users"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"     \",\n  \"email\": \"     \"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('[BUG-2] Should return 400 — whitespace must be rejected', () => {",
+              "  pm.response.to.have.status(400);",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[BUG-2] PUT /users/:id — whitespace name and email accepted (expect 400)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["users", "{{userId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"     \",\n  \"email\": \"     \"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('[BUG-2] Should return 400 — whitespace must be rejected', () => {",
+              "  pm.response.to.have.status(400);",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[BUG-3] POST /users — invalid email format accepted (expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/users", "host": ["{{baseUrl}}"], "path": ["users"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"abc\",\n  \"email\": \"abc\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('[BUG-3] Should return 400 — invalid email format must be rejected', () => {",
+              "  pm.response.to.have.status(400);",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[BUG-3] PUT /users/:id — invalid email format accepted (expect 400)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/users/{{userId}}", "host": ["{{baseUrl}}"], "path": ["users", "{{userId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"abc\",\n  \"email\": \"abc\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('[BUG-3] Should return 400 — invalid email format must be rejected', () => {",
+              "  pm.response.to.have.status(400);",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[BUG-4] POST /users — duplicate email returns 201 instead of 409",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/users", "host": ["{{baseUrl}}"], "path": ["users"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alice\",\n  \"email\": \"alice@test.com\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('[BUG-4] Should return 409 Conflict — duplicate email', () => {",
+              "  pm.response.to.have.status(409);",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[Validation] POST /users — missing name field (expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/users", "host": ["{{baseUrl}}"], "path": ["users"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"noname@test.com\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status is 400 — name is required', () => pm.response.to.have.status(400));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[Validation] POST /users — missing email field (expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/users", "host": ["{{baseUrl}}"], "path": ["users"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"NoEmail\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status is 400 — email is required', () => pm.response.to.have.status(400));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[Edge Case] GET /users/:id — non-existent id (expect 404)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/users/99999", "host": ["{{baseUrl}}"], "path": ["users", "99999"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[Edge Case] GET /users/:id — string id instead of number",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/users/abc", "host": ["{{baseUrl}}"], "path": ["users", "abc"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Should not return 200 for invalid id type', () => {",
+              "  pm.expect(pm.response.code).to.not.eql(200);",
+              "});"
+            ]}
+          }]
+        }
+
+      ]
+    },
+
+    {
+      "name": "Products",
+      "item": [
+
+        {
+          "name": "[Happy Path] POST /products — create product",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/products", "host": ["{{baseUrl}}"], "path": ["products"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Product A\",\n  \"price\": 100,\n  \"quantity\": 50,\n  \"status\": \"FOR_SALE\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Returns product with id', () => {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body.data.id).to.be.a('number');",
+              "  pm.collectionVariables.set('productId', body.data.id);",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[Happy Path] GET /products — get all products",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/products", "host": ["{{baseUrl}}"], "path": ["products"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returns array', () => {",
+              "  pm.expect(pm.response.json().data).to.be.an('array');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[Happy Path] GET /products/:id — get product by id",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/products/{{productId}}", "host": ["{{baseUrl}}"], "path": ["products", "{{productId}}"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returns correct product', () => {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body.data.id).to.eql(Number(pm.collectionVariables.get('productId')));",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[Happy Path] PUT /products/:id — update product",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/products/{{productId}}", "host": ["{{baseUrl}}"], "path": ["products", "{{productId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Product A Updated\",\n  \"price\": 150,\n  \"quantity\": 40,\n  \"status\": \"FOR_SALE\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Price is updated correctly — not swapped with quantity', () => {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body.data.price).to.eql(150);",
+              "  pm.expect(body.data.quantity).to.eql(40);",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[BUG-6] POST /products — whitespace name accepted (expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/products", "host": ["{{baseUrl}}"], "path": ["products"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"  \",\n  \"price\": 0,\n  \"quantity\": 0,\n  \"status\": \"FOR_SALE\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('[BUG-6] Should return 400 — whitespace name must be rejected', () => {",
+              "  pm.response.to.have.status(400);",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[BUG-6] PUT /products/:id — whitespace name accepted (expect 400)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/products/{{productId}}", "host": ["{{baseUrl}}"], "path": ["products", "{{productId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"  \",\n  \"price\": 100,\n  \"quantity\": 10,\n  \"status\": \"FOR_SALE\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('[BUG-6] Should return 400 — whitespace name must be rejected', () => {",
+              "  pm.response.to.have.status(400);",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[BUG-7] POST /products — negative price accepted (expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/products", "host": ["{{baseUrl}}"], "path": ["products"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"product1\",\n  \"price\": -20,\n  \"quantity\": 0,\n  \"status\": \"FOR_SALE\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('[BUG-7] Should return 400 — negative price must be rejected', () => {",
+              "  pm.response.to.have.status(400);",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[BUG-8] PUT /products/:id — price is swapped with quantity",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/products/{{productId}}", "host": ["{{baseUrl}}"], "path": ["products", "{{productId}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"product1\",\n  \"price\": 10,\n  \"quantity\": 1000,\n  \"status\": \"FOR_SALE\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('[BUG-8] Price must equal 10, not 1000 (quantity swap bug)', () => {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body.data.price).to.eql(10);",
+              "  pm.expect(body.data.quantity).to.eql(1000);",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[Validation] POST /products — invalid status value (expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/products", "host": ["{{baseUrl}}"], "path": ["products"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"product1\",\n  \"price\": 10,\n  \"quantity\": 5,\n  \"status\": \"INVALID_STATUS\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status is 400 — invalid enum value', () => pm.response.to.have.status(400));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[Edge Case] GET /products/:id — non-existent id (expect 404)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/products/99999", "host": ["{{baseUrl}}"], "path": ["products", "99999"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ]}
+          }]
+        }
+
+      ]
+    },
+
+    {
+      "name": "Transactions",
+      "item": [
+
+        {
+          "name": "[Happy Path] POST /transactions — create transaction",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/transactions", "host": ["{{baseUrl}}"], "path": ["transactions"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{userId}},\n  \"productId\": {{productId}},\n  \"quantity\": 1\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Returns transaction with id', () => {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body.data.id).to.be.a('number');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[BUG-9] POST /transactions — product quantity increments instead of decrementing",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/transactions", "host": ["{{baseUrl}}"], "path": ["transactions"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{userId}},\n  \"productId\": {{productId}},\n  \"quantity\": 1\n}"
+            }
+          },
+          "event": [{
+            "listen": "prerequest",
+            "script": { "exec": [
+              "// Step 1: capture product quantity before the transaction",
+              "const baseUrl = pm.collectionVariables.get('baseUrl');",
+              "const productId = pm.collectionVariables.get('productId');",
+              "pm.sendRequest(`${baseUrl}/products/${productId}`, (err, res) => {",
+              "  const qty = res.json().data.quantity;",
+              "  pm.collectionVariables.set('quantityBefore', qty);",
+              "});"
+            ]}
+          },
+          {
+            "listen": "test",
+            "script": { "exec": [
+              "// Step 2: fetch product again and confirm quantity decreased",
+              "const baseUrl = pm.collectionVariables.get('baseUrl');",
+              "const productId = pm.collectionVariables.get('productId');",
+              "const before = Number(pm.collectionVariables.get('quantityBefore'));",
+              "pm.sendRequest(`${baseUrl}/products/${productId}`, (err, res) => {",
+              "  const after = res.json().data.quantity;",
+              "  pm.test('[BUG-9] Product quantity must decrease by 1 after transaction', () => {",
+              "    pm.expect(after).to.eql(before - 1);",
+              "  });",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[Happy Path] GET /transactions — get all transactions",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/transactions", "host": ["{{baseUrl}}"], "path": ["transactions"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returns array', () => {",
+              "  pm.expect(pm.response.json().data).to.be.an('array');",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[Happy Path] GET /transactions/:id — get transaction by id",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/transactions/1", "host": ["{{baseUrl}}"], "path": ["transactions", "1"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status is 200 or 404', () => {",
+              "  pm.expect([200, 404]).to.include(pm.response.code);",
+              "});"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[Validation] POST /transactions — quantity zero (expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/transactions", "host": ["{{baseUrl}}"], "path": ["transactions"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": {{userId}},\n  \"productId\": {{productId}},\n  \"quantity\": 0\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status is 400 — quantity must be at least 1', () => pm.response.to.have.status(400));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[Validation] POST /transactions — missing userId (expect 400)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/transactions", "host": ["{{baseUrl}}"], "path": ["transactions"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": {{productId}},\n  \"quantity\": 1\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status is 400 — userId is required', () => pm.response.to.have.status(400));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[Edge Case] POST /transactions — non-existent userId (expect 404)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/transactions", "host": ["{{baseUrl}}"], "path": ["transactions"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": 99999,\n  \"productId\": {{productId}},\n  \"quantity\": 1\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status is 404 — user not found', () => pm.response.to.have.status(404));"
+            ]}
+          }]
+        },
+
+        {
+          "name": "[Edge Case] GET /transactions/:id — non-existent id (expect 404)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{baseUrl}}/transactions/99999", "host": ["{{baseUrl}}"], "path": ["transactions", "99999"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ]}
+          }]
+        }
+
+      ]
+    }
+
+  ]
+}
